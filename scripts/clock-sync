@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Check if the script is run as root (with sudo)
+if [ "$(id -u)" -ne 0 ]; then
+  echo "This script must be run as root (use sudo)."
+  exit 1
+fi
+
+# Check if an IP address was provided
+if [ -z "$1" ]; then
+  timedatectl set-ntp on
+  exit 0
+fi
+
+IP=$1
+
+# Disable NTP (Network Time Protocol)
+timedatectl set-ntp off
+
+# Sync time using rdate with the provided IP address
+rdate -n $IP
+
+echo "Time synchronized with $IP"

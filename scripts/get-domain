@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import re
+import sys
+
+def run_nxc_ldap(ip, user, secret, is_hash, debug):
+    cmd = ['nxc', 'ldap', ip, '-u', user]
+    if is_hash:
+        cmd.extend(['-H', secret])
+    else:
+        cmd.extend(['-p', secret])
+
+    if debug:
+        print(f"[DEBUG] Running command: {' '.join(cmd)}")
+
+    try:
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=True)
+        output = result.stdout
+        if debug:
+            print(output)
+    except subprocess.CalledProcessError as e:
+        print("[ERROR] Command failed to run.")
+        if debug:
+            print(e.output)
+        sys.exit(1)
+
+    # Extract domain from output
+    match = re.search(r'\(domain:([^\)]+)\)', output)
+    if match:
+        domain = match.group(1)
+        print(domain)
+    else:
+        print("[WARNING] Domain not found in output.")
+
+def main():
+    parser = argparse.ArgumentParser(description="Run nxc and extract domain.")
+    parser.add_argument('-i', metavar="IP", required=True, help='Domain controller IP')
+    parser.add_argument('-u', metavar="user", required=True, help='Username')
+    
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-p', metavar="password", help='Password')
+    group.add_argument('-H', metavar="NTLM hash", help='NT Hash')
+
+    parser.add_argument('--debug', action='store_true', help='Print full command output')
+
+    args = parser.parse_args()
+
+    secret = args.p if args.p else args.H
+    is_hash = bool(args.H)
+
+    run_nxc_ldap(args.i, args.u, secret, is_hash, args.debug)
+
+if __name__ == "__main__":
+    main()
+

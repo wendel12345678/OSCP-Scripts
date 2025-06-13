@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import subprocess
+import argparse
+import sys
+
+def run_cmd(cmd, password, debug=False):
+    try:
+        result = subprocess.run(
+            ['bash', '-c', f"echo '{password}' | {cmd}"],
+            capture_output=True, text=True
+        )
+        if debug:
+            print(f"\n[DEBUG] Command: {cmd}")
+            print(result.stdout.strip())
+            if result.stderr.strip():
+                print(f"[DEBUG][stderr]: {result.stderr.strip()}")
+        return result.stdout.strip(), result.stderr.strip()
+    except Exception as e:
+        print(f"[ERROR] Failed to run command: {cmd}\n{e}")
+        return "", str(e)
+
+def crawl_group(dbfile, group, password, debug, prefix=""):
+    cmd = f"keepassxc-cli ls '{dbfile}' '{group}'" if group else f"keepassxc-cli ls '{dbfile}'"
+    out, err = run_cmd(cmd, password, debug)
+
+    if "[empty]" in out:
+        return
+
+    lines = out.splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        full_path = f"{group}/{line}" if group else line
+        if line.endswith('/'):
+            # recurse into directory
+            crawl_group(dbfile, full_path.rstrip('/'), password, debug, prefix + "  ")
+        else:
+            # show entry
+            cmd_show = f"keepassxc-cli show -s '{dbfile}' '{full_path}'"
+            entry_out, entry_err = run_cmd(cmd_show, password, debug)
+            print(f"\n{prefix}{full_path}")
+            print(entry_out)
+
+def main():
+    parser = argparse.ArgumentParser(description="Crawl KeePass .kdbx file")
+    parser.add_argument("-f", "--file", required=True, help="Path to .kdbx file")
+    parser.add_argument("-p", "--password", required=True, help="Database password")
+    parser.add_argument("--debug", action="store_true", help="Show debug output")
+    args = parser.parse_args()
+
+    crawl_group(args.file, "", args.password, args.debug)
+
+if __name__ == "__main__":
+    main()
+

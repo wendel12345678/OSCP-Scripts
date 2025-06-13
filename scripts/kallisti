@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+
+kallisti = """g     ,                                                               
+g    .@,                                                              
+g   .@s@s,.                                                           
+g   S@@ss@@@@s,.                                                      
+g  sS@@@ss@@@@@Ss,  ,                                                 
+g SSSSS@@@ss@@@SSSs @,                                                
+gsSSSSSSSS@@ss@SSSSs@@s, ,                                            
+g@@@@@SSSSSSSSssSSS@@@@@sSs,                                          
+g @@@@@@@@@@@@@@ss@@@@@@@@SSs ,                                       
+g `@@@@@@@@@@@@@@ss@@@@@@@SSSs@,                                      
+gSsSSSS@@@@@@@@@@@ss@@@@@@SSSSS@,                                     
+g`SSSSSSSSS@@@@@@@@@ss@@@@SSSSS@@                                     
+g `SSSSSSSSSSSS@@@@@@ss@@SSSSSS@@'b,''',g                               
+g , `SSSSSSSSSSSSSSS@@ss@SSSSS@@@;b%,.,,`g                              
+g  @sSSSSSSSSSSSSSSSSSSssSSSS@@@@;b%;%%'g                               
+g   `@@@@@@@SSSSSSSSSSSSssSSS@@@@;b%;%'w                 _.-~~-.__      
+  g    `@@@@@@@@@@@@@@@SSSssS@@@@;b%;% w              _-~ _-rOw-_   ''-,  
+  g       `@@@@@@@@@@@@@@@@@ss@@@;b%;% a   ...,,,,,,,w('___ ~~~        ',
+  g           `@@@@@@@@@@@@@@@ssS;b%;% a .;;%%;%%;r>~~~w\\~~~~~~--' /-,    
+  a     .,::;;;;;;;;g`SSSSSSSSSSSss;b%%a,::;%;%%%%%%%;%%w `-------'   |   
+ a   .:::;;;;;%;;;;;;;,;;,;;,;;,::,.,::;%%%%%;%%%%%%%%%%%%%%%;%%%w/    
+w~qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq'    /
+w                                                                   / 
+w .-~============================================================--'a%;
+w/a:;;;;;%;;;;;;%;%%;%xx%;%%%%%%%;%%%%%%%x%%%%%%%%%%%%%x%x%x%%%%%%%;%;%
+a::;%;;%;;;%;%;;%;%%x%;%%%%%%%%%%r τῇ a%x%%x%%%%%%%%%%%%%x%%x%x%%%%%%;%%
+a:;;;;%;;%;;%;;%%%;x%x%%%;%%%%r καλλίστῃ a%%x%%%%%%%%%%%xx%x%x%%%%%%%%;;
+a:%;;;;;%;;%;;%%;%%;%;%%%%%%%%%%%%;%%x%%x%%x%;%%%%%%%%%x%x%%%%%%%%%;%;
+a:;;;%;;;;%;%;%;%%;%%%%%%%;%%%%%%%%%%%x%%x%%%%%%%%%%%%x%x%%x%%%%%%;%;%
+a:w_.-~qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq'
+w/                                                                    
+w     .-~=============================================================
+w    /a;;%;;;%;;;%%%;%%;%%%%%%%%%%;%%%%%%%%%%;%%%%%%%%%%%%%%;%;%;%%%;' 
+w\\   a:::;;%;;;%%;%;%;%%;%;%%%%%%%%%%%%%%%%%%%%%%;%%;%%%%;%%%;%;%;%;'  
+w '-==a`:::;;;%;;%;;%%;%;%%%%%%%%%%%%%%%%%%;%%%%%%%%%%%;%%%;%%;%%;'    
+a       `:::;;;%;;%;%;%%%%;%%%%%%;%%%%%%%%%%%%;%%%;%%;%%;%%;%%;'      
+a         `:::;;%;;%;;%;%%%%%%;%%%%%%%%%%%%;%%%%%%%%%%%;%;%%;'w \\      
+w    _,..,,,_a:::;%;;;%;;%;%x%%%%%;%%%%%%%%x%%%%%%;%%%;%%;%;w/   /      
+w `````^~"-,  `qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqw'   /       
+w           `~:..                                            /        
+w                `:-~=====================================--'a         
+a                  `:::;;%;;%:,`%x%xx%x',:%;%%%%;%%;'                 
+a                    `:::;;;;;:::'   `:::;;;;;;:::'                   
+"""
+
+
+
+import shutil
+
+width, _ = shutil.get_terminal_size()
+x = int((width - 69) / 2)
+
+# Define color escape codes
+colors = {
+    'a': '\033[93m',  # Gold
+    'g': '\033[32m',  # Green
+    'b': '\033[33m',  # Brown
+    'r': '\033[31m',  # Red
+    'd': '\033[30m',  # Black
+    'w': '\033[37m',  # White
+    'e': '\033[90m',  # Grey
+    'q': '"'          # quote
+}
+reset = '\033[0m'  # Reset color
+
+kallisti = '\n'.join([f"\033[40mw{'?'*x}\033[0m{line}\033[47md{'!'*x}\033[0m" for line in kallisti.splitlines()])
+
+# Replace each matching character with its color code
+for char, color in colors.items():
+        kallisti = kallisti.replace(char, color)
+
+# Print with colors and reset at the end
+print(kallisti + reset)
