@@ -1,5 +1,7 @@
 These scripts were developed to streamline common tasks during the OSCP exam and are provided as-is. Users are responsible for managing their own dependencies. The scripts primarily rely on a default Kali Linux environment and standard Python 3 libraries. This project does not represent professional-grade software and is intended solely for personal use and educational purposes. Users are strongly encouraged to explore and understand all options available in the source code of these scripts. Doing so not only ensures effective use of these specific tools, but also helps build the essential skill of reading and analyzing Python code, an important ability for success in the OSCP exam.
 
+[![Video Tutorial](https://img.youtube.com/vi/1VTjEL_21as/maxresdefault.jpg)](https://youtu.be/1VTjEL_21as)
+
 # Installation
 
 The `install` script installs the scripts into `/opt/oscp-scripts` and updates the user's and sudo's path.
